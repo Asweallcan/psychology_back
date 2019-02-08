@@ -1,4 +1,4 @@
-from app import create_app, db, PaperTables, PaperInfo, User, create_paper_table
+from app import create_app, db, mail, PaperTables, PaperInfo, User, create_paper_table
 from flask_migrate import Migrate
 import os
 
@@ -6,6 +6,7 @@ migrate_app = Migrate()
 
 app = create_app(os.environ.get("CONFIG_NAME", "default"))
 migrate_app.init_app(app, db)
+mail.init_app(app)
 
 with app.app_context():
 	"""

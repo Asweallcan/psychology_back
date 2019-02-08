@@ -7,6 +7,7 @@ class PaperInfo(db.Model):
 	id = db.Column(db.Integer, primary_key=True, autoincrement=True, index=True)
 	table_name = db.Column(db.String(32), nullable=False, primary_key=True, index=True)
 	paper_name = db.Column(db.String(32), nullable=False)
+	paper_img = db.Column(db.Text)
 	cols_num = db.Column(db.Integer)
 	questions = db.Column(db.Text, nullable=False)
 	questions_img = db.Column(db.Text)
