@@ -19,6 +19,7 @@ def create_paper_table(table_name: str, cols_num: int, need_deploy: bool = False
 		"id": db.Column(db.Integer, primary_key=True, autoincrement=True, index=True),
 		"comment": db.Column(db.Text),
 		"score": db.Column(db.Text),
+		"class": db.Column(db.Integer),
 		"user": db.relationship("User", backref=table_name, uselist=False),
 		**{"col_" + str(i + 1): db.Column(db.Integer) for i in range(cols_num)}
 	})

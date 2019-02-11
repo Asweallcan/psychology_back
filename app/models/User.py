@@ -32,14 +32,24 @@ class User(db.Model):
 		return token.decode()
 
 	@staticmethod
-	def verify_confirm_token(token, user):
+	def verify_confirm_token(token, username):
 		s = Serializer(current_app.config["SECRETE_KEY"])
+		user = User.query.filter_by(username=username).first()
+		if not user:
+			return -2, "Bad signature"
 		try:
 			data = s.loads(token)
-			if user != data["user"]:
-				return -1, "Bad signature"
+			if username != data["user"]:
+				return -2, "Bad signature"
 			return 0, "Confirm success"
 		except SignatureExpired:
 			return -1, "Signature expired"
 		except BadSignature:
 			return -2, "Bad signature"
+
+	def to_json(self):
+		return {
+			"username": self.username,
+			"email": self.email,
+			"is_admin": self.is_admin
+		}

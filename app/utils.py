@@ -1,4 +1,5 @@
 from flask import request, make_response, jsonify
+from .models import User
 
 
 def response_with_status(status, statusText, data=None):
@@ -9,7 +10,8 @@ def response_with_status(status, statusText, data=None):
 
 
 def get_user(response):
-	user = request.cookies.get("user")
+	username = request.cookies.get("user")
+	user = User.query.filter_by(username=username).first()
 	if not user:
 		response.headers["redirect"] = "login"
 		return None
