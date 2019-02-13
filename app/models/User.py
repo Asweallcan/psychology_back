@@ -1,7 +1,8 @@
 from app.db import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, SignatureExpired, BadSignature
-from flask import current_app, request
+from flask import current_app
+from datetime import datetime
 
 
 class User(db.Model):
@@ -11,6 +12,7 @@ class User(db.Model):
 	email = db.Column(db.String(32), nullable=False)
 	password_hash = db.Column(db.Text)
 	is_admin = db.Column(db.Boolean, default=False)
+	last_seen = db.Column(db.DateTime, default=datetime.now)
 	confirmed = db.Column(db.Boolean, default=False)
 
 	@property
@@ -51,5 +53,11 @@ class User(db.Model):
 		return {
 			"username": self.username,
 			"email": self.email,
-			"is_admin": self.is_admin
+			"is_admin": self.is_admin,
+			"last_seen": self.last_seen
 		}
+
+	def update_last_seen(self):
+		self.last_seen = datetime.now()
+		db.session.add(self)
+		db.session.commit()

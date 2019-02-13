@@ -1,10 +1,11 @@
 from . import api
-from flask import request
+from flask import request, copy_current_request_context, current_app
 from flask_mail import Message
 from ..models import User
 from ..utils import get_user, response_with_status, make_response
 from ..db import db
 from ..mail import mail
+import threading
 
 
 @api.route("/login", methods=["POST"])
@@ -33,9 +34,11 @@ def login():
 	if not user.confirmed:
 		response = response_with_status(-2, "need confirmation")
 		token = user.generate_confirm_token()
-		send_confirm(path=data["path"], token=token, username=user.username, forget=False, recipients=[user.email, ])
+		send_confirm(path=data["path"], token=token, username=user.username, forget=False, recipients=[user.email, ],
+		             sender=current_app.config["MAIL_DEFAULT_SENDER"])
 		response.set_cookie("user", user.username, max_age=60 * 5 + 1)
 		return response
+	user.update_last_seen()
 	response = response_with_status(0, "login success", user.to_json())
 	response.set_cookie("user", user.username, max_age=(60 * 60 * 24 * 7) if data["remember"] else 0)
 	return response
@@ -65,7 +68,8 @@ def register():
 	except:
 		db.session.rollback()
 		return "", 500
-	send_confirm(path=data["path"], username=data["username"], forget=False, token=token, recipients=[data["email"], ])
+	send_confirm(path=data["path"], username=data["username"], forget=False, token=token, recipients=[data["email"], ],
+	             sender=current_app.config["MAIL_DEFAULT_SENDER"])
 	response = response_with_status(0, "Register success")
 	response.set_cookie("user", data["username"], max_age=5 * 60 + 1, httponly=True)
 	return response
@@ -116,7 +120,8 @@ def re_send_confirm():
 	if user.confirmed and not data["forget"]:
 		return response_with_status(1, "Confirm already")
 	token = user.generate_confirm_token()
-	send_confirm(path=path, token=token, forget=data["forget"], username=user.username, recipients=[user.email, ])
+	send_confirm(path=path, token=token, forget=data["forget"], username=user.username, recipients=[user.email, ],
+	             sender=current_app.config["MAIL_DEFAULT_SENDER"])
 	response = response_with_status(0, "Send success")
 	response.set_cookie("user", user.username, max_age=5 * 60 + 1)
 	return response
@@ -153,15 +158,32 @@ def change_user_fields():
 	return response_with_status(0, "change success")
 
 
-def send_confirm(path, token, username, forget: bool, recipients: list):
+@api.route("/logout", methods=["POST"])
+def logout():
+	"""
+	退出登录接口参数：
+		无
+	返回参数:
+		status: 0 退出成功
+		statusText
+		data
+	"""
+	response = response_with_status(0, "logout success")
+	response.delete_cookie("user")
+	return response
+
+
+def send_confirm(path, token, username, forget: bool, recipients: list,
+                 sender):
 	"""
 	:param path: 目标系统的url地址
 	:param token: 邮箱验证token
 	:param username: 用户名
 	:param forget: 是否是忘记密码的邮件
 	:param recipients: 接收人
+	:param sender: 发送者，默认读取appConfig文件中的配置
 	"""
-	message = Message(subject="心理评测系统邮箱激活", recipients=[*recipients, ])
+	message = Message(subject="心理评测系统邮箱激活", recipients=[*recipients, ], sender=sender)
 	if not forget:
 		message.html = """
 			<h2>你好，{username}</h2>
@@ -174,4 +196,10 @@ def send_confirm(path, token, username, forget: bool, recipients: list):
 			<p>请点击下面的按钮进行密码修改。</p>
 			<p><a href="{path}/confirm?token={token}&user={username}&forget={forget}">{path}/confirm?token={token}&user={username}&forget={forget}</a></p>
 			""".format(username=username, path=path, token=token, forget=int(forget))
-	mail.send(message)
+
+	@copy_current_request_context
+	def send_async_email(message):
+		mail.send(message)
+
+	t = threading.Thread(target=send_async_email, args=[message])
+	t.start()

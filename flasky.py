@@ -1,12 +1,11 @@
-from app import create_app, db, mail, PaperTables, PaperInfo, User, create_paper_table
+from app import create_app, db, PaperTables, PaperInfo, create_paper_table, User
 from flask_migrate import Migrate
 import os
 
-migrate_app = Migrate()
-
 app = create_app(os.environ.get("CONFIG_NAME", "default"))
-migrate_app.init_app(app, db)
-mail.init_app(app)
+
+migrate = Migrate()
+migrate.init_app(app, db)
 
 with app.app_context():
 	"""
@@ -21,7 +20,7 @@ with app.app_context():
 
 @app.shell_context_processor
 def make_shell_context():
-	return dict(db=db, User=User, PaperInfo=PaperInfo, PaperTables=PaperTables)
+	return dict(db=db, User=User)
 
 
 @app.cli.command()

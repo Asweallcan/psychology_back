@@ -12,3 +12,16 @@ def login_require(f):
 		f(*args, **kwargs)
 
 	return wrapper
+
+
+def admin_require(f):
+	@wraps(f)
+	def wrapper(*args, **kwargs):
+		response = make_response()
+		user = get_user(response)
+		if not user.is_admin:
+			response.headers["redirect"] = "admin"
+			return response
+		f(*args, **kwargs)
+
+	return wrapper

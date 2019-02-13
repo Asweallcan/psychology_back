@@ -7,7 +7,8 @@ class PaperInfo(db.Model):
 	id = db.Column(db.Integer, primary_key=True, autoincrement=True, index=True)
 	table_name = db.Column(db.String(32), nullable=False, primary_key=True, index=True)
 	paper_name = db.Column(db.String(32), nullable=False)
-	paper_img = db.Column(db.Text)
+	average = db.Column(db.String(32))
+	description = db.Column(db.String(32))
 	cols_num = db.Column(db.Integer)
 	questions = db.Column(db.Text, nullable=False)
 	questions_img = db.Column(db.Text)
@@ -31,7 +32,15 @@ class PaperInfo(db.Model):
 			PaperTables[self.table_name] = create_paper_table(self.table_name, self.cols_num)
 		self.__dict__[key] = value
 
-	def to_json(self):
+	def info_to_json(self, user):
+		return {
+			"paper_name": self.paper_name,
+			"description": self.description,
+			"attended": getattr(user, self.table_name) is not None,
+			"attend_count": PaperTables[self.table_name].query.count()
+		}
+
+	def paper_to_json(self):
 		"""
 		将试卷格式化为json
 		:return: object

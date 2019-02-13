@@ -5,7 +5,7 @@ from flask_migrate import migrate, upgrade
 PaperTables = {}
 
 
-def create_paper_table(table_name: str, cols_num: int, need_deploy: bool = False):
+def create_paper_table(table_name, cols_num: int, need_deploy: bool = False):
 	"""
 	动态创建试卷表的函数
 	:param table_name: 创建表的表名称
