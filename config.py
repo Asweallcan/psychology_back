@@ -15,6 +15,8 @@ class Config:
 	MAIL_DEFAULT_SENDER = "296877137@qq.com"
 	MAIL_USERNAME = "296877137@qq.com"
 	MAIL_PASSWORD = "ocenipsgocozbgfh"
+	CONFIRM_TOKEN = "confirm_token"
+	COOKIE_TOKEN = "cookie_token"
 
 
 class ProductionConfig(Config):

@@ -1,7 +1,7 @@
 from app.db import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, SignatureExpired, BadSignature
-from flask import current_app
+from flask import current_app, make_response
 from datetime import datetime
 
 
@@ -29,13 +29,13 @@ class User(db.Model):
 		return check_password_hash(self.password_hash, password)
 
 	def generate_confirm_token(self):
-		s = Serializer(current_app.config["SECRETE_KEY"], expires_in=60 * 5)
+		s = Serializer(current_app.config["SECRETE_KEY"], expires_in=60 * 5, salt=current_app.config["CONFIRM_TOKEN"])
 		token = s.dumps({"user": self.username})
 		return token.decode()
 
 	@staticmethod
 	def verify_confirm_token(token, username):
-		s = Serializer(current_app.config["SECRETE_KEY"])
+		s = Serializer(current_app.config["SECRETE_KEY"], salt=current_app.config["CONFIRM_TOKEN"])
 		user = User.query.filter_by(username=username).first()
 		if not user:
 			return -2, "Bad signature"
@@ -49,6 +49,29 @@ class User(db.Model):
 		except BadSignature:
 			return -2, "Bad signature"
 
+	def generate_cookie_token(self):
+		s = Serializer(current_app.config["SECRETE_KEY"], expires_in=60 * 60 * 24 * 7,
+		               salt=current_app.config["COOKIE_TOKEN"])
+		token = s.dumps({"user": self.username})
+		return token.decode()
+
+	@staticmethod
+	def get_cookie_user(token):
+		s = Serializer(current_app.config["SECRETE_KEY"], salt=current_app.config["COOKIE_TOKEN"])
+		try:
+			data = s.loads(token)
+		except SignatureExpired or BadSignature:
+			return None
+		user = User.query.filter_by(username=data["user"]).first()
+		if not user:
+			return None
+		return user
+
+	def update_last_seen(self):
+		self.last_seen = datetime.now()
+		db.session.add(self)
+		db.session.commit()
+
 	def to_json(self):
 		return {
 			"username": self.username,
@@ -56,8 +79,3 @@ class User(db.Model):
 			"is_admin": self.is_admin,
 			"last_seen": self.last_seen
 		}
-
-	def update_last_seen(self):
-		self.last_seen = datetime.now()
-		db.session.add(self)
-		db.session.commit()
