@@ -55,15 +55,9 @@ def set_user_cookie(user, response, confirm=False, remember=False):
 	return response
 
 
-def get_user_from_cookie(response):
+def get_user_from_cookie():
 	token = request.cookies.get("token")
-	if not token:
-		response.headers["redirect"] = "login"
-		return None
 	user = User.get_cookie_user(token)
-	if not user:
-		response.headers["redirect"] = "login"
-		return None
 	return user
 
 

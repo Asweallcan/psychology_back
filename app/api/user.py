@@ -4,6 +4,7 @@ from ..models import User
 from ..utils import send_confirm, response_with_status, make_response, get_user_from_cookie, set_user_cookie, \
 	delete_user_cookie
 from ..db import db
+from ..decorators import login_require
 
 
 @api.route("/login", methods=["POST"])
@@ -80,10 +81,9 @@ def confirm():
 	data:
 	"""
 	data = request.json
-	response = response_with_status(-2, "Wrong user token")
-	user = get_user_from_cookie(response)
+	user = User.get_cookie_user(data["token"])
 	if not user:
-		return response
+		return response_with_status(-2, "Bad signature")
 	status, statusText = User.verify_confirm_token(data["token"].encode(), user.username)
 	if status == 0 and not data["forget"]:
 		user = User.query.filter_by(username=user.username).first()
@@ -138,9 +138,10 @@ def change_user_fields():
 	"""
 	data = request.json
 	response = make_response()
-	user = User.query.filter_by(username=data["user"]).first() or get_user_from_cookie(response)
+	user = User.query.filter_by(username=data["user"]).first() or get_user_from_cookie()
 	if not user:
 		if not data["user"]:
+			response.headers["redirect"] = "login"
 			return response
 		else:
 			return response_with_status(-1, "can not find user")
@@ -171,6 +172,7 @@ def logout():
 
 
 @api.route("/user_info")
+@login_require
 def user_info():
 	"""
 	获取用户数据接口参数：
@@ -180,8 +182,5 @@ def user_info():
 		statusText
 		data: { username, is_admin, email, last_seen }
 	"""
-	response = make_response()
-	user = get_user_from_cookie(response)
-	if not user:
-		return response
+	user = get_user_from_cookie()
 	return response_with_status(0, "Success", user.to_json())
