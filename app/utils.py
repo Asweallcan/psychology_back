@@ -57,7 +57,9 @@ def set_user_cookie(user, response, confirm=False, remember=False):
 
 def get_user_from_cookie():
 	token = request.cookies.get("token")
-	user = User.get_cookie_user(token)
+	if not token:
+		return None
+	user = User.get_cookie_user(token.encode())
 	return user
 
 

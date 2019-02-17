@@ -7,7 +7,8 @@ def login_require(f):
 	@wraps(f)
 	def wrapper(*args, **kwargs):
 		response = make_response()
-		if not get_user_from_cookie():
+		user = get_user_from_cookie()
+		if not user:
 			response.headers["redirect"] = "login"
 			return response
 		return f(*args, **kwargs)

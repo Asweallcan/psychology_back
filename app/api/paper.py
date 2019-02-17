@@ -1,6 +1,6 @@
 from . import api
 from ..models import PaperInfo
-from ..decorators import login_require
+from ..decorators import login_require, admin_require
 from ..utils import get_user_from_cookie, response_with_status
 
 
@@ -9,3 +9,10 @@ from ..utils import get_user_from_cookie, response_with_status
 def paper_info():
 	user = get_user_from_cookie()
 	return response_with_status(0, "Success", [paper.info_to_json(user) for paper in PaperInfo.query.all()])
+
+
+@api.route("/upload_paper")
+@login_require
+@admin_require
+def upload_paper():
+	pass

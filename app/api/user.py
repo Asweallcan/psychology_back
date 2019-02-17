@@ -33,8 +33,7 @@ def login():
 		             sender=current_app.config["MAIL_DEFAULT_SENDER"])
 		set_user_cookie(user, response)
 		return response
-	user.update_last_seen()
-	response = response_with_status(0, "login success", user.to_json())
+	response = response_with_status(0, "login success")
 	set_user_cookie(user, response, remember=data["remember"])
 	return response
 
@@ -166,6 +165,9 @@ def logout():
 		statusText
 		data
 	"""
+	user = get_user_from_cookie()
+	if user:
+		user.update_last_seen()
 	response = response_with_status(0, "logout success")
 	delete_user_cookie(response)
 	return response

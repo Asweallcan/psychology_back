@@ -5,20 +5,21 @@ from .PaperTable import PaperTables, create_paper_table
 class PaperInfo(db.Model):
 	__tablename__ = "paper_infos"
 	id = db.Column(db.Integer, primary_key=True, autoincrement=True, index=True)
-	table_name = db.Column(db.String(32), nullable=False, primary_key=True, index=True)
+	table_name = db.Column(db.String(32), nullable=False, primary_key=True, unique=True, index=True)
 	paper_name = db.Column(db.String(32), nullable=False)
-	average = db.Column(db.String(32))
+	type = db.Column(db.String(32), default="psychology")
 	description = db.Column(db.String(32))
+	average = db.Column(db.String(32))
 	cols_num = db.Column(db.Integer)
 	questions = db.Column(db.Text, nullable=False)
 	questions_img = db.Column(db.Text)
 	answers = db.Column(db.Text, nullable=False)
 	answers_img = db.Column(db.Text)
-	answers_score = db.Column(db.Text, nullable=False)
-	answers_multiple = db.Column(db.Text, default=False)
-	score_attr = db.Column(db.Text, nullable=False)
-	comments_condition = db.Column(db.Text, nullable=False)
-	comments = db.Column(db.Text, nullable=False)
+	answers_score = db.Column(db.Text)
+	answers_multiple = db.Column(db.Text)
+	score_attr = db.Column(db.Text)
+	comments_condition = db.Column(db.Text)
+	comments = db.Column(db.Text)
 
 	def __setattr__(self, key, value):
 		"""

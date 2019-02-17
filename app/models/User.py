@@ -63,8 +63,6 @@ class User(db.Model):
 		except SignatureExpired or BadSignature:
 			return None
 		user = User.query.filter_by(username=data["user"]).first()
-		if not user:
-			return None
 		return user
 
 	def update_last_seen(self):
