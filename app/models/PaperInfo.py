@@ -9,6 +9,7 @@ class PaperInfo(db.Model):
 	paper_name = db.Column(db.String(32), nullable=False)
 	type = db.Column(db.String(32), default="psychology")
 	description = db.Column(db.String(32))
+	download_url = db.Column(db.String(32))
 	average = db.Column(db.String(32))
 	cols_num = db.Column(db.Integer)
 	questions = db.Column(db.Text, nullable=False)
