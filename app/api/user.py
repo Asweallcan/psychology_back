@@ -1,10 +1,10 @@
 from . import api
 from flask import request, current_app
 from ..models import User
-from ..utils import send_confirm, response_with_status, make_response, get_user_from_cookie, set_user_cookie, \
-	delete_user_cookie
+from ..utils import send_confirm, response_with_status, make_response
 from ..db import db
 from ..decorators import login_require
+import traceback
 
 
 @api.route("/login", methods=["POST"])
@@ -24,17 +24,17 @@ def login():
 	user = User.query.filter(User.username == data["username"]).first()
 	if not user or not user.verify_password(data["password"]):
 		response = response_with_status(-1, "username or password wrong")
-		delete_user_cookie(response)
+		User.delete_user_cookie(response)
 		return response
 	if not user.confirmed:
 		response = response_with_status(-2, "need confirmation")
 		token = user.generate_confirm_token()
 		send_confirm(path=data["path"], token=token, username=user.username, forget=False, recipients=[user.email, ],
 		             sender=current_app.config["MAIL_DEFAULT_SENDER"])
-		set_user_cookie(user, response)
+		User.set_user_cookie(user, response, confirm=True)
 		return response
 	response = response_with_status(0, "login success")
-	set_user_cookie(user, response, remember=data["remember"])
+	User.set_user_cookie(user, response, remember=data["remember"])
 	return response
 
 
@@ -61,11 +61,12 @@ def register():
 		db.session.commit()
 	except:
 		db.session.rollback()
+		traceback.print_exc()
 		return "", 500
 	send_confirm(path=data["path"], username=data["username"], forget=False, token=token, recipients=[data["email"], ],
 	             sender=current_app.config["MAIL_DEFAULT_SENDER"])
 	response = response_with_status(0, "Register success")
-	set_user_cookie(user, response, confirm=True)
+	User.set_user_cookie(user, response, confirm=True)
 	return response
 
 
@@ -80,7 +81,7 @@ def confirm():
 	data:
 	"""
 	data = request.json
-	user = User.get_cookie_user(data["token"])
+	user = User.get_user_from_cookie()
 	if not user:
 		return response_with_status(-2, "Bad signature")
 	status, statusText = User.verify_confirm_token(data["token"].encode(), user.username)
@@ -92,6 +93,7 @@ def confirm():
 			db.session.commit()
 		except:
 			db.session.rollback()
+			traceback.print_exc()
 			return "", 500
 	return response_with_status(status, statusText)
 
@@ -119,7 +121,7 @@ def re_send_confirm():
 	send_confirm(path=path, token=token, forget=data["forget"], username=user.username, recipients=[user.email, ],
 	             sender=current_app.config["MAIL_DEFAULT_SENDER"])
 	response = response_with_status(0, "Send success")
-	set_user_cookie(user, response, confirm=True)
+	User.set_user_cookie(user, response, confirm=True)
 	return response
 
 
@@ -151,6 +153,7 @@ def change_user_fields():
 		db.session.commit()
 	except:
 		db.session.rollback()
+		traceback.print_exc()
 		return "", 500
 	return response_with_status(0, "change success")
 
@@ -165,11 +168,11 @@ def logout():
 		statusText
 		data
 	"""
-	user = get_user_from_cookie()
+	user = User.get_user_from_cookie()
 	if user:
 		user.update_last_seen()
 	response = response_with_status(0, "logout success")
-	delete_user_cookie(response)
+	User.delete_user_cookie(response)
 	return response
 
 
@@ -184,5 +187,5 @@ def user_info():
 		statusText
 		data: { username, is_admin, email, last_seen }
 	"""
-	user = get_user_from_cookie()
+	user = User.get_user_from_cookie()
 	return response_with_status(0, "Success", user.to_json())

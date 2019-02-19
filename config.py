@@ -6,7 +6,7 @@ class Config:
 	SQLALCHEMY_DATABASE_URI = "mysql://{username}:{password}@{host}/{database}".format(username="root",
 	                                                                                   password="gamersky.com",
 	                                                                                   host="localhost",
-	                                                                                   database="learnpython")
+	                                                                                   database="py")
 	SQLALCHEMY_TRACK_MODIFICATIONS = False
 	MAIL_SERVER = "smtp.qq.com"
 	MAIL_PORT = 465

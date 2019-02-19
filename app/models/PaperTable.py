@@ -1,6 +1,8 @@
 from .User import User
 from app.db import db
 from flask_migrate import migrate, upgrade
+from flask import copy_current_request_context
+from threading import Thread
 
 PaperTables = {}
 
@@ -16,14 +18,21 @@ def create_paper_table(table_name, cols_num: int, need_deploy: bool = False):
 	setattr(User, table_name + "_id", db.Column(db.Integer, db.ForeignKey(table_name + ".id")))
 	paper_table_class = type(table_name.capitalize(), (db.Model,), {
 		"__tablename__": table_name,
-		"id": db.Column(db.Integer, primary_key=True, autoincrement=True, index=True),
+		"id": db.Column(db.Integer, primary_key=True, autoincrement=True, index=True, default=1),
 		"comment": db.Column(db.Text),
 		"score": db.Column(db.Text),
 		"class": db.Column(db.Integer),
 		"user": db.relationship("User", backref=table_name, uselist=False),
 		**{"col_" + str(i + 1): db.Column(db.Integer) for i in range(cols_num)}
 	})
+
 	if need_deploy:
-		migrate()
-		upgrade()
+		@copy_current_request_context
+		def upgrade_database():
+			migrate()
+			upgrade()
+
+		t = Thread(target=upgrade_database)
+		t.start()
+
 	return paper_table_class

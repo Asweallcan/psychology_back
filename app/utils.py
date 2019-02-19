@@ -1,7 +1,6 @@
 import threading
-from flask import request, make_response, jsonify, copy_current_request_context
+from flask import make_response, jsonify, copy_current_request_context
 from flask_mail import Message
-from .models import User
 from .mail import mail
 
 
@@ -44,24 +43,4 @@ def send_confirm(path, token, username, forget: bool, recipients: list,
 	t.start()
 
 
-def set_user_cookie(user, response, confirm=False, remember=False):
-	token = user.generate_cookie_token()
-	max_age = 0
-	if confirm:
-		max_age = 60 * 5
-	if remember:
-		max_age = 60 * 60 * 24 * 7
-	response.set_cookie("token", token, max_age=max_age, httponly=True)
-	return response
 
-
-def get_user_from_cookie():
-	token = request.cookies.get("token")
-	if not token:
-		return None
-	user = User.get_cookie_user(token.encode())
-	return user
-
-
-def delete_user_cookie(response):
-	response.delete_cookie("token")
