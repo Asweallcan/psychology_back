@@ -1,6 +1,5 @@
-from app import create_app, db, PaperTables, PaperInfo, create_paper_table, User
+from app import create_app, db, Paper, User, rb_users_papers
 from flask_migrate import Migrate
-import traceback
 import os
 
 app = create_app(os.environ.get("CONFIG_NAME", "default"))
@@ -8,17 +7,10 @@ app = create_app(os.environ.get("CONFIG_NAME", "default"))
 migrate = Migrate()
 migrate.init_app(app, db)
 
-with app.app_context():
-	try:
-		for info in PaperInfo.query.all():
-			PaperTables[info.table_name] = create_paper_table(info.table_name, info.cols_num)
-	except Exception:
-		traceback.print_exc()
-
 
 @app.shell_context_processor
 def make_shell_context():
-	return dict(db=db, User=User, PT=PaperTables, PI=PaperInfo)
+	return dict(db=db, User=User, Paper=Paper, RB_users_papers=rb_users_papers)
 
 
 @app.cli.command()

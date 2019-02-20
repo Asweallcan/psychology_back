@@ -1,10 +1,22 @@
 from . import api
 from flask import request, current_app
 from ..models import User
-from ..utils import send_confirm, response_with_status, make_response
+from ..utils import send_confirm, response_with_status, make_response, error_response
 from ..db import db
 from ..decorators import login_require
 import traceback
+
+
+@api.route("/user", methods=["POST", "GET", "PUT", "DELETE"])
+def user():
+	if request.method == "POST":
+		return register()
+	elif request.method == "GET":
+		return user_info()
+	elif request.method == "PUT":
+		return change_user_fields()
+	elif request.method == "DELETE":
+		return delete_user()
 
 
 @api.route("/login", methods=["POST"])
@@ -38,38 +50,6 @@ def login():
 	return response
 
 
-@api.route("/register", methods=["POST"])
-def register():
-	"""
-	注册接口参数:
-		username: 用户名
-		password: 密码
-		email: 邮箱
-		path: 目标系统的origin
-	返回参数:
-		status: -1 用户或者账号已经存在 / 0 注册成功
-		statusText:
-		data:
-	"""
-	data = request.json
-	if User.query.filter_by(username=data["username"]).first() is not None:
-		return response_with_status(-1, "Username already exists")
-	user = User(username=data["username"], email=data["email"], password=data["password"])
-	token = user.generate_confirm_token()
-	try:
-		db.session.add(user)
-		db.session.commit()
-	except:
-		db.session.rollback()
-		traceback.print_exc()
-		return "", 500
-	send_confirm(path=data["path"], username=data["username"], forget=False, token=token, recipients=[data["email"], ],
-	             sender=current_app.config["MAIL_DEFAULT_SENDER"])
-	response = response_with_status(0, "Register success")
-	User.set_user_cookie(user, response, confirm=True)
-	return response
-
-
 @api.route("/confirm", methods=["POST"])
 def confirm():
 	"""
@@ -94,7 +74,7 @@ def confirm():
 		except:
 			db.session.rollback()
 			traceback.print_exc()
-			return "", 500
+			return error_response()
 	return response_with_status(status, statusText)
 
 
@@ -125,39 +105,6 @@ def re_send_confirm():
 	return response
 
 
-@api.route("/change_user_fields", methods=["POST"])
-def change_user_fields():
-	"""
-	重新发送验证接口参数:
-		fields: 需要修改数值的参数列表
-		values: 对应上面的参数值
-		user: 用户名
-	返回参数:
-		status: -1 找不到用户名 / 0 修改成功
-		statusText:
-		data:
-	"""
-	data = request.json
-	response = make_response()
-	user = User.query.filter_by(username=data["user"]).first() or get_user_from_cookie()
-	if not user:
-		if not data["user"]:
-			response.headers["redirect"] = "login"
-			return response
-		else:
-			return response_with_status(-1, "can not find user")
-	for i in range(len(data["fields"])):
-		setattr(user, data["fields"][i], data["values"][i])
-	try:
-		db.session.add(user)
-		db.session.commit()
-	except:
-		db.session.rollback()
-		traceback.print_exc()
-		return "", 500
-	return response_with_status(0, "change success")
-
-
 @api.route("/logout", methods=["POST"])
 def logout():
 	"""
@@ -176,7 +123,6 @@ def logout():
 	return response
 
 
-@api.route("/user_info")
 @login_require
 def user_info():
 	"""
@@ -189,3 +135,70 @@ def user_info():
 	"""
 	user = User.get_user_from_cookie()
 	return response_with_status(0, "Success", user.to_json())
+
+
+def register():
+	"""
+	注册接口参数:
+		username: 用户名
+		password: 密码
+		email: 邮箱
+		path: 目标系统的origin
+	返回参数:
+		status: -1 用户或者账号已经存在 / 0 注册成功
+		statusText:
+		data:
+	"""
+	data = request.json
+	if User.query.filter_by(username=data["username"]).first() is not None:
+		return response_with_status(-1, "Username already exists")
+	user = User(username=data["username"], email=data["email"], password=data["password"])
+	token = user.generate_confirm_token()
+	try:
+		db.session.add(user)
+		db.session.commit()
+	except:
+		db.session.rollback()
+		traceback.print_exc()
+		return error_response()
+	send_confirm(path=data["path"], username=data["username"], forget=False, token=token, recipients=[data["email"], ],
+	             sender=current_app.config["MAIL_DEFAULT_SENDER"])
+	response = response_with_status(0, "Register success")
+	User.set_user_cookie(user, response, confirm=True)
+	return response
+
+
+def change_user_fields():
+	"""
+	重新发送验证接口参数:
+		fields: 需要修改数值的参数列表
+		values: 对应上面的参数值
+		user: 用户名
+	返回参数:
+		status: -1 找不到用户名 / 0 修改成功
+		statusText:
+		data:
+	"""
+	data = request.json
+	response = make_response()
+	user = User.query.filter_by(username=data["user"]).first() or User.get_user_from_cookie()
+	if not user:
+		if not data["user"]:
+			response.headers["redirect"] = "login"
+			return response
+		else:
+			return response_with_status(-1, "can not find user")
+	for i in range(len(data["fields"])):
+		setattr(user, data["fields"][i], data["values"][i])
+	try:
+		db.session.add(user)
+		db.session.commit()
+	except:
+		db.session.rollback()
+		traceback.print_exc()
+		return error_response()
+	return response_with_status(0, "change success")
+
+
+def delete_user():
+	pass

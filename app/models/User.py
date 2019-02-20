@@ -1,8 +1,9 @@
-from app.db import db
+from ..db import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer, SignatureExpired, BadSignature
 from flask import current_app, request
 from datetime import datetime
+from .Registrations import rb_users_papers
 
 
 class User(db.Model):
@@ -11,9 +12,12 @@ class User(db.Model):
 	username = db.Column(db.String(32), nullable=False, index=True, unique=True, primary_key=True)
 	email = db.Column(db.String(32), nullable=False)
 	password_hash = db.Column(db.Text)
-	is_admin = db.Column(db.Boolean, default=False)
+	is_admin = db.Column(db.Boolean, default=True)
 	last_seen = db.Column(db.DateTime, default=datetime.now)
 	confirmed = db.Column(db.Boolean, default=False)
+	grades = db.relationship("Grade", backref="user", lazy="dynamic")
+	papers = db.relationship("Paper", secondary=rb_users_papers, backref=db.backref("users", lazy="dynamic"),
+	                         lazy="dynamic")
 
 	@property
 	def password(self):

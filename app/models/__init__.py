@@ -1,3 +1,4 @@
 from .User import User
-from .PaperInfo import PaperInfo
-from .PaperTable import PaperTables, create_paper_table
+from .Grade import Grade
+from .Paper import Paper
+from .Registrations import rb_users_papers

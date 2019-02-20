@@ -1,11 +1,11 @@
 import unittest
-from app.models import PaperInfo, PaperTables, User
+from app.models import Paper, PaperTables, User
 
-p = PaperInfo(table_name="paper_test", paper_name="测试", questions="z@z@z", questions_img="_@_@_",
-              answers="1/2/3/4@1/2/3/5@1/2/3/6", answers_img="///@///@///",
-              answers_score="-1#-2#-3#0/1#2#3#4/3#4#5#6/2#1#4#5@-1#-2#-3#0/1#2#3#4/3#4#5#6/2#1#4#6@-1#-2#-3#0/1#2#3#4/3#4#5#6/2#1#4#7",
-              answers_multiple="0@1@0", comments_condition="50#70/10#100@0#10@20#100",
-              comments="很有责任心@责任心@有责任心", score_attr="责任心@爱心@激情@努力")
+p = Paper(table_name="paper_test", paper_name="测试", questions="z@z@z", questions_img="_@_@_",
+          answers="1/2/3/4@1/2/3/5@1/2/3/6", answers_img="///@///@///",
+          answers_score="-1#-2#-3#0/1#2#3#4/3#4#5#6/2#1#4#5@-1#-2#-3#0/1#2#3#4/3#4#5#6/2#1#4#6@-1#-2#-3#0/1#2#3#4/3#4#5#6/2#1#4#7",
+          answers_multiple="0@1@0", comments_condition="50#70/10#100@0#10@20#100",
+          comments="很有责任心@责任心@有责任心", score_attr="责任心@爱心@激情@努力")
 
 
 class TestPaper(unittest.TestCase):

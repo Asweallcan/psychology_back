@@ -43,4 +43,5 @@ def send_confirm(path, token, username, forget: bool, recipients: list,
 	t.start()
 
 
-
+def error_response():
+	return "", 500

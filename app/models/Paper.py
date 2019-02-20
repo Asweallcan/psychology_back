@@ -1,15 +1,13 @@
-from app.db import db
-from .PaperTable import PaperTables, create_paper_table
+from ..db import db
 
 
-class PaperInfo(db.Model):
-	__tablename__ = "paper_infos"
+class Paper(db.Model):
+	__tablename__ = "papers"
 	id = db.Column(db.Integer, primary_key=True, autoincrement=True, index=True, default=1)
-	table_name = db.Column(db.String(32), nullable=False, primary_key=True, unique=True, index=True)
-	paper_name = db.Column(db.String(32), nullable=False)
+	paper_name = db.Column(db.String(32), nullable=False, index=True, primary_key=True)
 	type = db.Column(db.String(32), default="psychology")
 	description = db.Column(db.String(32))
-	download_url = db.Column(db.String(32))
+	filename = db.Column(db.String(32))
 	average = db.Column(db.String(32))
 	cols_num = db.Column(db.Integer)
 	questions = db.Column(db.Text, nullable=False)
@@ -21,29 +19,20 @@ class PaperInfo(db.Model):
 	score_attrs = db.Column(db.Text)
 	comments_condition = db.Column(db.Text)
 	comments = db.Column(db.Text)
+	grades = db.relationship("Grade", backref="paper", lazy="dynamic")
 
 	def __setattr__(self, key, value):
 		"""
-		当设置questions属性的时候自动设置cols_num并且更新PaperTables
+		当设置questions属性的时候自动设置cols_num
 		"""
 		if key == "table_name":
 			if not value.startswith("paper_"):
 				value = "paper_" + value
 		if key == "questions":
 			self.cols_num = len(value.split("@"))
-			PaperTables[self.table_name] = create_paper_table(self.table_name, self.cols_num, need_deploy=True)
 		self.__dict__[key] = value
 
-	def info_to_json(self, user):
-		return {
-			"id": self.id,
-			"paper_name": self.paper_name,
-			"description": self.description,
-			"attended": bool(getattr(user, self.table_name + "_id")),
-			"attend_count": PaperTables[self.table_name].query.count()
-		}
-
-	def paper_to_json(self):
+	def to_json(self):
 		"""
 		将试卷格式化为json
 		:return: object
@@ -51,6 +40,21 @@ class PaperInfo(db.Model):
 		questions = self.questions_to_json()
 		answers = self.answers_to_json()
 		return [{**questions[i], **answers[i]} for i in range(self.cols_num)]
+
+	def info_to_json(self, user):
+		"""
+		试卷信息json化
+		:param user: 用户信息
+		:return:
+		"""
+		return {
+			"id": self.id,
+			"paper_name": self.paper_name,
+			"description": self.description,
+			"attended": user.papers.filter_by(id=self.id).first() is not None,
+			"attend_count": len(self.users.all()),
+			"download_url": "/uploads/{filename}".format(filename=self.filename)
+		}
 
 	def questions_to_json(self):
 		questions = self.questions.split("@")
@@ -76,5 +80,9 @@ class PaperInfo(db.Model):
 
 	@staticmethod
 	def get_fields():
-		return ["table_name", "paper_name", "type", "description", "questions", "questions_img", "answers",
+		"""
+		获取从excel表格中需要获取的参数
+		:return:
+		"""
+		return ["paper_name", "type", "description", "questions", "questions_img", "answers",
 		        "answers_img", "answers_score", "answers_multiple", "score_attrs", "comments_condition", "comments"]
