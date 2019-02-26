@@ -1,7 +1,10 @@
 import threading
+import traceback
 from flask import make_response, jsonify, copy_current_request_context
 from flask_mail import Message
+from contextlib import contextmanager
 from .mail import mail
+from .db import db
 
 
 def response_with_status(status, statusText, data=None):
@@ -45,3 +48,14 @@ def send_confirm(path, token, username, forget: bool, recipients: list,
 
 def error_response():
 	return "", 500
+
+
+@contextmanager
+def auto_commit_db():
+	try:
+		yield
+		db.session.commit()
+	except:
+		traceback.print_exc()
+		db.session.rollback()
+		return error_response()

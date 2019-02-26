@@ -8,16 +8,19 @@ from .Registrations import rb_users_papers
 
 class User(db.Model):
 	__tablename__ = "users"
-	id = db.Column(db.Integer, primary_key=True, autoincrement=True, index=True, default=1)
+	id = db.Column(db.Integer, primary_key=True, autoincrement=True, index=True)
 	username = db.Column(db.String(32), nullable=False, index=True, unique=True, primary_key=True)
 	email = db.Column(db.String(32), nullable=False)
 	password_hash = db.Column(db.Text)
 	is_admin = db.Column(db.Boolean, default=True)
 	last_seen = db.Column(db.DateTime, default=datetime.now)
 	confirmed = db.Column(db.Boolean, default=False)
-	grades = db.relationship("Grade", backref="user", lazy="dynamic")
-	papers = db.relationship("Paper", secondary=rb_users_papers, backref=db.backref("users", lazy="dynamic"),
-	                         lazy="dynamic")
+	grades = db.relationship("Grade", backref="user", lazy="dynamic", cascade="all, delete-orphan",
+	                         passive_deletes=True)
+	papers = db.relationship("Paper", secondary=rb_users_papers,
+	                         backref=db.backref("users", lazy="dynamic", cascade="delete, delete-orphan",
+	                                            single_parent=True, passive_deletes=True),
+	                         lazy="dynamic", cascade="delete, delete-orphan", single_parent=True)
 
 	@property
 	def password(self):

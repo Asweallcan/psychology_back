@@ -1,10 +1,11 @@
 from . import api
 from flask import request, current_app
 from ..models import User
-from ..utils import send_confirm, response_with_status, make_response, error_response
+from ..utils import send_confirm, response_with_status, make_response, auto_commit_db
 from ..db import db
-from ..decorators import login_require
-import traceback
+from ..decorators import login_require, admin_require
+import pandas as pd
+import os
 
 
 @api.route("/user", methods=["POST", "GET", "PUT", "DELETE"])
@@ -17,6 +18,14 @@ def user():
 		return change_user_fields()
 	elif request.method == "DELETE":
 		return delete_user()
+
+
+@api.route("/users", methods=["POST", "GET", "PUT", "DELETE"])
+def users():
+	if request.method == "GET":
+		return user_list()
+	if request.method == "POST":
+		return add_users()
 
 
 @api.route("/login", methods=["POST"])
@@ -63,23 +72,18 @@ def confirm():
 	data = request.json
 	user = User.get_user_from_cookie()
 	if not user:
-		return response_with_status(-2, "Bad signature")
+		return response_with_status(-1, "token expired")
 	status, statusText = User.verify_confirm_token(data["token"].encode(), user.username)
 	if status == 0 and not data["forget"]:
 		user = User.query.filter_by(username=user.username).first()
 		user.confirmed = True
-		try:
+		with auto_commit_db():
 			db.session.add(user)
-			db.session.commit()
-		except:
-			db.session.rollback()
-			traceback.print_exc()
-			return error_response()
 	return response_with_status(status, statusText)
 
 
 @api.route("/send_confirm", methods=["POST"])
-def re_send_confirm():
+def r_send_confirm():
 	"""
 	重新发送验证接口参数:
 		forget: 是否是忘记密码
@@ -154,13 +158,8 @@ def register():
 		return response_with_status(-1, "Username already exists")
 	user = User(username=data["username"], email=data["email"], password=data["password"])
 	token = user.generate_confirm_token()
-	try:
+	with auto_commit_db():
 		db.session.add(user)
-		db.session.commit()
-	except:
-		db.session.rollback()
-		traceback.print_exc()
-		return error_response()
 	send_confirm(path=data["path"], username=data["username"], forget=False, token=token, recipients=[data["email"], ],
 	             sender=current_app.config["MAIL_DEFAULT_SENDER"])
 	response = response_with_status(0, "Register success")
@@ -187,18 +186,71 @@ def change_user_fields():
 			response.headers["redirect"] = "login"
 			return response
 		else:
-			return response_with_status(-1, "can not find user")
+			return response_with_status(-1, "Can not find user")
 	for i in range(len(data["fields"])):
 		setattr(user, data["fields"][i], data["values"][i])
-	try:
+	with auto_commit_db():
 		db.session.add(user)
-		db.session.commit()
-	except:
-		db.session.rollback()
-		traceback.print_exc()
-		return error_response()
-	return response_with_status(0, "change success")
+	return response_with_status(0, "Success")
 
 
+@login_require
+@admin_require
 def delete_user():
-	pass
+	data = request.json
+	users = User.query.filter(User.username.in_(data["users"])).all()
+	with auto_commit_db():
+		[db.session.delete(user) for user in users]
+	return response_with_status(0, "Success")
+
+
+@login_require
+@admin_require
+def user_list():
+	"""
+	获取试卷信息的接口参数：
+		page?: 第几页
+		pageSize?: 一页多少个
+	返回：
+		total: 用户的总量
+		list: [user.to_json]
+	"""
+	page = request.args.get("page", 1, int)
+	pageSize = request.args.get("pageSize", 10, int)
+	current_user = User.get_user_from_cookie()
+	data = {
+		"total": User.query.count(),
+		"list": [user.to_json() for user in User.query.paginate(page=page, per_page=pageSize).items if
+		         current_user.username != user.username]
+	}
+	return response_with_status(0, "Success", data)
+
+
+@login_require
+@admin_require
+def add_users():
+	data = request.json
+	file_str = "./uploads/{filename}"
+	file_path = os.path.abspath(file_str.format(filename=data["filename"]))
+	df = pd.DataFrame(pd.read_excel(file_path))
+	df = df.fillna("_")
+	users = []
+	duplicates = []
+	fields = ["username", "password", "email", "is_admin"]
+	for i in range(len(df.values)):
+		if User.query.filter_by(username=df["username"].astype("str").values[i].strip()).first():
+			duplicates.append(str(i + 1))
+			continue
+		user = User()
+		for field in fields:
+			value = df[field].astype("str").values[i].strip()
+			if field == "is_admin":
+				value = True if value == "1" else False
+			setattr(user, field, value if value != "_" else "")
+		users.append(user)
+	with auto_commit_db():
+		db.session.add_all(users)
+	if len(duplicates) > 0:
+		return response_with_status(-1, ", ".join(duplicates))
+	os.unlink(file_path)
+	return response_with_status(0, "Success")
