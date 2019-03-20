@@ -17,10 +17,7 @@ class User(db.Model):
 	confirmed = db.Column(db.Boolean, default=False)
 	grades = db.relationship("Grade", backref="user", lazy="dynamic", cascade="all, delete-orphan",
 	                         passive_deletes=True)
-	papers = db.relationship("Paper", secondary=rb_users_papers,
-	                         backref=db.backref("users", lazy="dynamic", cascade="delete, delete-orphan",
-	                                            single_parent=True, passive_deletes=True),
-	                         lazy="dynamic", cascade="delete, delete-orphan", single_parent=True)
+	papers = db.relationship("Paper", secondary=rb_users_papers, lazy="dynamic")
 
 	@property
 	def password(self):
@@ -46,11 +43,19 @@ class User(db.Model):
 		db.session.commit()
 
 	def to_json(self):
+		finished = [{"analyzed": grade.analyzed, "id": grade.paper_id,
+		             "paper_name": self.papers.filter_by(id=grade.paper_id).first().paper_name} for grade in
+		            self.grades.filter_by(finished=True)]
+		unfinished = [{"analyzed": grade.analyzed, "id": grade.paper_id,
+		               "paper_name": self.papers.filter_by(id=grade.paper_id).first().paper_name} for grade in
+		              self.grades.filter_by(finished=False)]
 		return {
 			"username": self.username,
 			"email": self.email,
 			"is_admin": self.is_admin,
-			"last_seen": self.last_seen
+			"last_seen": self.last_seen,
+			"finished": finished,
+			"unfinished": unfinished
 		}
 
 	def generate_cookie_token(self):

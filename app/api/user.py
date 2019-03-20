@@ -218,11 +218,20 @@ def user_list():
 	page = request.args.get("page", 1, int)
 	pageSize = request.args.get("pageSize", 10, int)
 	current_user = User.get_user_from_cookie()
-	data = {
-		"total": User.query.count(),
-		"list": [user.to_json() for user in User.query.paginate(page=page, per_page=pageSize).items if
-		         current_user.username != user.username]
-	}
+	search = request.args.get("search", "", str)
+	if len(search) < 1:
+		data = {
+			"total": User.query.count(),
+			"list": [user.to_json() for user in User.query.paginate(page=page, per_page=pageSize).items if
+			         current_user.username != user.username]
+		}
+	else:
+		data = {
+			"total": User.query.count(),
+			"list": [user.to_json() for user in User.query.paginate(page=page, per_page=pageSize).items if
+			         current_user.username != user.username and (
+					         user.username.find(search) > -1 or user.email.find(search) > -1)]
+		}
 	return response_with_status(0, "Success", data)
 
 
@@ -237,17 +246,20 @@ def add_users():
 	users = []
 	duplicates = []
 	fields = ["username", "password", "email", "is_admin"]
-	for i in range(len(df.values)):
-		if User.query.filter_by(username=df["username"].astype("str").values[i].strip()).first():
-			duplicates.append(str(i + 1))
-			continue
-		user = User()
-		for field in fields:
-			value = df[field].astype("str").values[i].strip()
-			if field == "is_admin":
-				value = True if value == "1" else False
-			setattr(user, field, value if value != "_" else "")
-		users.append(user)
+	try:
+		for i in range(len(df.values)):
+			if User.query.filter_by(username=df["username"].astype("str").values[i].strip()).first():
+				duplicates.append(str(i + 1))
+				continue
+			user = User()
+			for field in fields:
+				value = df[field].astype("str").values[i].strip()
+				if field == "is_admin":
+					value = True if value == "1" else False
+				setattr(user, field, value if value != "_" else "")
+			users.append(user)
+	except:
+		return response_with_status(-2, "Xlsx error")
 	with auto_commit_db():
 		db.session.add_all(users)
 	if len(duplicates) > 0:

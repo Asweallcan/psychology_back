@@ -53,6 +53,7 @@ def error_response():
 @contextmanager
 def auto_commit_db():
 	try:
+		db.create_all()
 		yield
 		db.session.commit()
 	except:

@@ -10,8 +10,7 @@ class Config:
 	                                                                                   password="gamersky.com",
 	                                                                                   host="localhost",
 	                                                                                   database="py")
-	SQLALCHEMY_TRACK_MODIFICATIONS = False
-	SQLALCHEMY_COMMIT_ON_TEARDOWN = True
+	SQLALCHEMY_TRACK_MODIFICATIONS = True
 	MAIL_SERVER = "smtp.qq.com"
 	MAIL_PORT = 465
 	MAIL_USE_SSL = True

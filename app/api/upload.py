@@ -9,7 +9,7 @@ import time
 @api.route("/upload", methods=["POST"])
 @login_require
 @admin_require
-def upload_paper():
+def upload():
 	paper_file = request.files["file"]
 	extname = "." + paper_file.filename.split(".").pop()
 	filename = str(int(time.time())) + extname

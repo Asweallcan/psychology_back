@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from flask import request
 from . import api
-from ..models import Paper, User
+from ..models import Paper
 from ..decorators import login_require, admin_require
 from ..utils import response_with_status, auto_commit_db
 from ..db import db
@@ -130,6 +130,8 @@ def edit_paper():
 		os.rename(file_path, new_file_path)
 	if "description" in data["fields"]:
 		paper.description = data["values"][data["fields"].index("description")]
-	with auto_commit_db():
-		db.session.add(paper)
+	sql = "UPDATE papers SET paper_name='{paper_name}',filename='{filename}',description='{description}' WHERE id={id}".format(
+		paper_name=paper.paper_name, filename=paper.filename, description=paper.description, id=paper.id)
+	db.session.execute(sql)
+	db.session.commit()
 	return response_with_status(0, "Success")
