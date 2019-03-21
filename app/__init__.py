@@ -13,7 +13,7 @@ pymysql.install_as_MySQLdb()
 def create_app(config_name):
 	app_path = os.path.dirname(__file__)
 	static_path = os.path.abspath(os.path.join(app_path, "../uploads"))
-	app = Flask(__name__, static_folder=static_path, static_url_path="/uploads")
+	app = Flask(__name__, template_folder=static_path, static_folder=static_path, static_url_path="")
 	app.config.from_object(config[config_name])
 	db.init_app(app)
 	mail.init_app(app)

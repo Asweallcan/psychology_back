@@ -1,11 +1,22 @@
 from app import create_app, db, Paper, User, rb_users_papers
 from flask_migrate import Migrate
+from flask import render_template, url_for, request
 import os
 
 app = create_app(os.environ.get("CONFIG_NAME", "default"))
 
 migrate = Migrate()
 migrate.init_app(app, db)
+
+
+@app.route("/")
+def index():
+	return render_template("index.html")
+
+
+@app.errorhandler(404)
+def not_found(e):
+	return render_template("index.html")
 
 
 @app.shell_context_processor

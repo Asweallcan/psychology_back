@@ -101,7 +101,7 @@ class Paper(db.Model):
 			"answered_count": answered_count,
 			"questions_count": self.questions_count,
 			"attend_count": len(self.users.all()),
-			"download_url": "/uploads/{filename}".format(filename=self.filename),
+			"download_url": "/{filename}".format(filename=self.filename),
 			"finished": finished,
 			"analyzed": analyzed
 		}

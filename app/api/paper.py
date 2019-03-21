@@ -1,11 +1,12 @@
 import os
 import pandas as pd
-from flask import request
+from flask import request, copy_current_request_context
 from . import api
 from ..models import Paper
 from ..decorators import login_require, admin_require
 from ..utils import response_with_status, auto_commit_db
 from ..db import db
+from threading import Thread
 
 
 @api.route("/paper", methods=["GET", "POST", "PUT", "DELETE"])
@@ -78,6 +79,17 @@ def add_paper():
 	paper.filename = paper.paper_name + extname
 	with auto_commit_db():
 		db.session.add(paper)
+
+	@copy_current_request_context
+	def clean_dirty_file():
+		dirs = os.listdir("./uploads")
+		files = [paper.filename for paper in Paper.query.all()]
+		for dir in dirs:
+			if dir not in files:
+				os.unlink(file_str.format(filename=dir))
+
+	t = Thread(target=clean_dirty_file)
+	t.start()
 	return response_with_status(0, "Success")
 
 

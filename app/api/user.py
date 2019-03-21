@@ -44,17 +44,19 @@ def login():
 	data = request.json
 	user = User.query.filter(User.username == data["username"]).first()
 	if not user or not user.verify_password(data["password"]):
-		response = response_with_status(-1, "username or password wrong")
+		response = response_with_status(-1, "Username or password wrong")
 		User.delete_user_cookie(response)
 		return response
+	if not user.email:
+		return response_with_status(-3, "Need email")
 	if not user.confirmed:
-		response = response_with_status(-2, "need confirmation")
+		response = response_with_status(-2, "Need confirmation")
 		token = user.generate_confirm_token()
 		send_confirm(path=data["path"], token=token, username=user.username, forget=False, recipients=[user.email, ],
 		             sender=current_app.config["MAIL_DEFAULT_SENDER"])
 		User.set_user_cookie(user, response, confirm=True)
 		return response
-	response = response_with_status(0, "login success")
+	response = response_with_status(0, "Success")
 	User.set_user_cookie(user, response, remember=data["remember"])
 	return response
 
