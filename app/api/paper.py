@@ -82,10 +82,14 @@ def add_paper():
 
 	@copy_current_request_context
 	def clean_dirty_file():
+		"""
+		删除额外上传的文件
+		:return:
+		"""
 		dirs = os.listdir("./uploads")
 		files = [paper.filename for paper in Paper.query.all()]
 		for dir in dirs:
-			if dir not in files:
+			if dir.endswith(".xlsx") and dir not in files:
 				os.unlink(file_str.format(filename=dir))
 
 	t = Thread(target=clean_dirty_file)
