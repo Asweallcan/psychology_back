@@ -40,7 +40,7 @@ class Paper(db.Model):
 		grade = self.grades.filter_by(user_id=user.id).first()
 		m_answers = []
 		answered_count = 0
-		comment = []
+		comment = ""
 		if grade:
 			n_answers = grade.answers.split("@")
 			for answer in n_answers:
@@ -54,8 +54,7 @@ class Paper(db.Model):
 			if grade.finished:
 				answered_count = self.questions_count
 			comments = self.comments.split("@")
-			for index, level in enumerate(map(int, grade.level.split("@")) if grade.level else []):
-				comment.append(comments[level - 1])
+			comment = comments[int(grade.level) - 1]
 		questions = self.questions_to_json()
 		answers = self.answers_to_json()
 		return {
@@ -71,7 +70,7 @@ class Paper(db.Model):
 			"score_attrs": self.score_attrs,
 			"score_above": grade.above_percent if grade else "",
 			"score": grade.score if grade else "",
-			"comment": "。".join(comment)
+			"comment": comment
 		}
 
 	def info_to_json(self):
